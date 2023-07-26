@@ -16,14 +16,18 @@ from lightgbm import LGBMClassifier
 from xgboost import XGBClassifier
 from sklearn.model_selection import KFold
 ##############################################################################
-X = pd.read_csv('first.txt', sep='\t')
-y = np.array(X['target'])
-X = np.array(X.drop(['target'], 1))
+internal = pd.read_csv('internal.txt', sep='\t')
+y_internal = np.array(internal['target'])
+X_external = np.array(internal.drop(['target'], 1))
+external = pd.read_csv('external.txt', sep='\t')
+y_external = np.array(external['target'])
+X_external = np.array(external.drop(['target'], 1))
 ##############################################################################
 cv = KFold(n_splits=10,shuffle=True)
 #1.Random Forest Classifier
-classifier = RandomForestClassifier(n_estimators=191,random_state=90,max_depth=9,min_samples_leaf=1
-                                   ,min_samples_split=5,max_features=5,criterion='gini')
+classifier = RandomForestClassifier(n_estimators=2000,random_state=90,max_depth=20,min_samples_leaf=10
+                                   ,min_samples_split=2,max_features=5,criterion='gini',
+                                   oob_score=True,max_leaf_nodes=None,min_impurity_decrease=0)
 
 #2.xgboost
 # classifier = XGBClassifier(n_estimators=110,max_depth=4,min_child_weight=1,gamma=0.1
@@ -71,7 +75,7 @@ ax.plot(
     mean_fpr,
     mean_tpr,
     color="b",
-    label=r"Mean ROC (AUC = %0.2f $\pm$ %0.2f)" % (mean_auc, std_auc),
+    label=r"Mean derivation cohort (AUC = %0.2f $\pm$ %0.2f)" % (mean_auc, std_auc),
     lw=2,
     alpha=0.8
 )
@@ -94,5 +98,10 @@ ax.set(
 )
 ax.legend(loc="lower right")
 ##############################################################################
+y_external_probs = classifier.predict_proba(X_external)[:, 1]
+fpr_external, tpr_external, _ = roc_curve(y_external, y_external_probs)
+roc_auc_external = auc(fpr_external, tpr_external)
+##############################################################################
+plt.plot(fpr_external, tpr_external, color='green', lw=2, label='validation cohort (AUC = %0.2f)' % roc_auc_external)
 plt.savefig('rf.pdf', dpi=300, bbox_inches="tight")
 plt.show()
